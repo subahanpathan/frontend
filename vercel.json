@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "env": {
+    "VITE_API_URL": "@vite_api_url",
+    "VITE_ENV": "production"
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "vite",
+  "framework": "vite",
+  "public": true
+}
