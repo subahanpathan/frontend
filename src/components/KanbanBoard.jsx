@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DndContext } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { FiChevronDown, FiTrash2, FiEdit2, FiUser, FiAlertCircle, FiLoader } from 'react-icons/fi';
 import bugService from '../services/bugService';
 import { useNavigate } from 'react-router-dom';
@@ -25,37 +28,45 @@ const KanbanBoard = ({ projectId, tickets, setTickets, loading }) => {
     );
   };
 
-  const handleDragEnd = async (result) => {
-    const { source, destination, draggableId } = result;
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
 
-    // If dropped in the same position
-    if (
-      !destination ||
-      (source.droppableId === destination.droppableId &&
-        source.index === destination.index)
-    ) {
-      return;
+    if (!over) return;
+
+    // Get the dragged ticket ID
+    const ticketId = active.id;
+
+    // Determine the target column
+    let newStatus;
+    
+    // If over is a ticket ID, get its status
+    const overTicket = tickets.find((t) => t.id === over.id);
+    if (overTicket) {
+      newStatus = overTicket.status;
+    } else {
+      // over.id is the column ID
+      newStatus = over.id;
     }
 
-    // New status is the destination column id
-    const newStatus = destination.droppableId;
-
     // Find the ticket being dragged
-    const ticket = tickets.find((t) => t.id === draggableId);
+    const ticket = tickets.find((t) => t.id === ticketId);
     if (!ticket) return;
+
+    // If dropped in the same column, do nothing
+    if ((ticket.status || 'open') === newStatus) return;
 
     // Update local state optimistically
     const updatedTickets = tickets.map((t) =>
-      t.id === draggableId ? { ...t, status: newStatus } : t
+      t.id === ticketId ? { ...t, status: newStatus } : t
     );
     setTickets(updatedTickets);
 
     // Mark as updating
-    setUpdatingTickets((prev) => new Set([...prev, draggableId]));
+    setUpdatingTickets((prev) => new Set([...prev, ticketId]));
 
     try {
       // Send update to API
-      await bugService.updateTicket(draggableId, { status: newStatus });
+      await bugService.updateTicket(ticketId, { status: newStatus });
       toast.success(`Ticket moved to ${columns[newStatus]?.label || newStatus}`);
     } catch (error) {
       // Revert on error
@@ -66,7 +77,7 @@ const KanbanBoard = ({ projectId, tickets, setTickets, loading }) => {
       // Remove from updating set
       setUpdatingTickets((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(draggableId);
+        newSet.delete(ticketId);
         return newSet;
       });
     }
@@ -119,85 +130,99 @@ const KanbanBoard = ({ projectId, tickets, setTickets, loading }) => {
     return colors[priority?.toLowerCase()] || colors.medium;
   };
 
-  // Ticket Card Component
-  const TicketCard = ({ ticket, index }) => {
+  // Ticket Card Component with useSortable hook
+  const TicketCard = ({ ticket }) => {
     const isUpdating = updatingTickets.has(ticket.id);
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({
+      id: ticket.id,
+      data: { type: 'ticket', ticket }
+    });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
 
     return (
-      <Draggable draggableId={ticket.id} index={index}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className={`bg-white border-l-4 rounded-lg p-4 mb-3 cursor-move transition-all ${
-              snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500 rotate-1' : 'hover:shadow-md border-gray-200'
-            } ${isUpdating ? 'opacity-60' : ''}
-            ${getPriorityBorderColor(ticket.priority)}`}
-          >
-            {/* Header with Title and Issue Type */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1 flex items-start gap-2">
-                <IssueTypeIcon type={ticket.issue_type} size={16} className="mt-0.5 flex-shrink-0" />
-                <h3
-                  onClick={() => navigate(`/ticket/${ticket.id}`)}
-                  className="text-sm font-medium text-gray-900 flex-1 cursor-pointer hover:text-blue-600 hover:underline line-clamp-2"
-                >
-                  {ticket.title}
-                </h3>
-              </div>
-              {isUpdating && <FiLoader size={16} className="animate-spin text-blue-600 flex-shrink-0" />}
-            </div>
-
-            {/* Ticket ID */}
-            <p className="text-xs font-mono text-gray-500 mb-2">{ticket.id}</p>
-
-            {/* Priority & Assignee */}
-            <div className="flex items-center justify-between gap-2 mb-3">
-              {/* Priority Badge */}
-              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                <FiAlertCircle size={12} />
-                {ticket.priority || 'medium'}
-              </div>
-
-              {/* Assignee */}
-              {ticket.assignee ? (
-                <div className="flex items-center gap-1">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs text-white font-semibold">
-                    {getInitials(ticket.assignee.first_name, ticket.assignee.last_name)}
-                  </div>
-                  <span className="text-xs text-gray-600 truncate">
-                    {ticket.assignee.first_name}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <FiUser size={14} />
-                  <span>Unassigned</span>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2 border-t border-gray-100">
-              <button
-                onClick={() => navigate(`/ticket/${ticket.id}`)}
-                className="flex-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 py-2 rounded transition-colors flex items-center justify-center gap-1 min-h-[36px]"
-              >
-                <FiEdit2 size={14} />
-                <span className="hidden sm:inline">View</span>
-              </button>
-              <button
-                onClick={() => handleDeleteTicket(ticket.id)}
-                className="flex-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 py-2 rounded transition-colors flex items-center justify-center gap-1 min-h-[36px]"
-              >
-                <FiTrash2 size={14} />
-                <span className="hidden sm:inline">Delete</span>
-              </button>
-            </div>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className={`bg-white border-l-4 rounded-lg p-4 mb-3 cursor-move transition-all ${
+          isDragging ? 'shadow-lg ring-2 ring-blue-500 rotate-1' : 'hover:shadow-md border-gray-200'
+        } ${isUpdating ? 'opacity-60' : ''}
+        ${getPriorityBorderColor(ticket.priority)}`}
+      >
+        {/* Header with Title and Issue Type */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 flex items-start gap-2">
+            <IssueTypeIcon type={ticket.issue_type} size={16} className="mt-0.5 flex-shrink-0" />
+            <h3
+              onClick={() => navigate(`/ticket/${ticket.id}`)}
+              className="text-sm font-medium text-gray-900 flex-1 cursor-pointer hover:text-blue-600 hover:underline line-clamp-2"
+            >
+              {ticket.title}
+            </h3>
           </div>
-        )}
-      </Draggable>
+          {isUpdating && <FiLoader size={16} className="animate-spin text-blue-600 flex-shrink-0" />}
+        </div>
+
+        {/* Ticket ID */}
+        <p className="text-xs font-mono text-gray-500 mb-2">{ticket.id}</p>
+
+        {/* Priority & Assignee */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          {/* Priority Badge */}
+          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
+            <FiAlertCircle size={12} />
+            {ticket.priority || 'medium'}
+          </div>
+
+          {/* Assignee */}
+          {ticket.assignee ? (
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs text-white font-semibold">
+                {getInitials(ticket.assignee.first_name, ticket.assignee.last_name)}
+              </div>
+              <span className="text-xs text-gray-600 truncate">
+                {ticket.assignee.first_name}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <FiUser size={14} />
+              <span>Unassigned</span>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <button
+            onClick={() => navigate(`/ticket/${ticket.id}`)}
+            className="flex-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 py-2 rounded transition-colors flex items-center justify-center gap-1 min-h-[36px]"
+          >
+            <FiEdit2 size={14} />
+            <span className="hidden sm:inline">View</span>
+          </button>
+          <button
+            onClick={() => handleDeleteTicket(ticket.id)}
+            className="flex-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 py-2 rounded transition-colors flex items-center justify-center gap-1 min-h-[36px]"
+          >
+            <FiTrash2 size={14} />
+            <span className="hidden sm:inline">Delete</span>
+          </button>
+        </div>
+      </div>
     );
   };
 
@@ -224,32 +249,38 @@ const KanbanBoard = ({ projectId, tickets, setTickets, loading }) => {
   }
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DndContext onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-5 gap-4 auto-rows-max">
-        {Object.entries(columns).map(([statusKey, columnInfo]) => (
-          <div key={statusKey} className={`${columnInfo.color} rounded-lg border border-gray-300 p-3 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col`}>
-            {/* Column Header */}
-            <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-400">
-              <h2 className={`font-bold ${columnInfo.textColor} flex items-center gap-2`}>
-                <span className="text-lg">{columnInfo.icon}</span>
-                {columnInfo.label}
-                <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-300 rounded-full text-xs font-semibold text-gray-800">
-                  {getTicketsForColumn(statusKey).length}
-                </span>
-              </h2>
-            </div>
+        {Object.entries(columns).map(([statusKey, columnInfo]) => {
+          const columnTickets = getTicketsForColumn(statusKey);
+          const ticketIds = columnTickets.map((t) => t.id);
 
-            {/* Droppable Container */}
-            <Droppable droppableId={statusKey}>
-              {(provided, snapshot) => (
+          return (
+            <div
+              key={statusKey}
+              className={`${columnInfo.color} rounded-lg border border-gray-300 p-3 md:p-4 min-h-[400px] md:min-h-[500px] flex flex-col`}
+            >
+              {/* Column Header */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-400">
+                <h2 className={`font-bold ${columnInfo.textColor} flex items-center gap-2`}>
+                  <span className="text-lg">{columnInfo.icon}</span>
+                  {columnInfo.label}
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-300 rounded-full text-xs font-semibold text-gray-800">
+                    {columnTickets.length}
+                  </span>
+                </h2>
+              </div>
+
+              {/* Droppable Container with SortableContext */}
+              <SortableContext
+                items={ticketIds}
+                strategy={verticalListSortingStrategy}
+              >
                 <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`flex-1 transition-colors rounded ${
-                    snapshot.isDraggingOver ? 'bg-blue-200 bg-opacity-30 ring-2 ring-blue-400' : ''
-                  }`}
+                  id={statusKey}
+                  className="flex-1 transition-colors rounded min-h-[100px]"
                 >
-                  {getTicketsForColumn(statusKey).length === 0 ? (
+                  {columnTickets.length === 0 ? (
                     <div className="flex items-center justify-center h-32 text-center">
                       <div>
                         <p className="text-gray-600 text-sm font-medium">No tickets</p>
@@ -257,18 +288,17 @@ const KanbanBoard = ({ projectId, tickets, setTickets, loading }) => {
                       </div>
                     </div>
                   ) : (
-                    getTicketsForColumn(statusKey).map((ticket, index) => (
-                      <TicketCard key={ticket.id} ticket={ticket} index={index} />
+                    columnTickets.map((ticket) => (
+                      <TicketCard key={ticket.id} ticket={ticket} />
                     ))
                   )}
-                  {provided.placeholder}
                 </div>
-              )}
-            </Droppable>
-          </div>
-        ))}
+              </SortableContext>
+            </div>
+          );
+        })}
       </div>
-    </DragDropContext>
+    </DndContext>
   );
 };
 

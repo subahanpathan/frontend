@@ -23,7 +23,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['zustand', 'react-hot-toast', 'react-icons'],
           'socket-vendor': ['socket.io-client'],
-          'dnd-vendor': ['react-dnd', 'react-dnd-html5-backend', 'react-beautiful-dnd']
+          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
         }
       }
     }
