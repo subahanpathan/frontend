@@ -37,12 +37,15 @@ function RegisterPage() {
         formData.firstName,
         formData.lastName
       );
-      setToken(response.data.data.token);
-      useAuthStore.setState({ user: { email: formData.email } });
-      toast.success('Registration successful!');
+      const { token, userId, firstName, lastName, email } = response.data.data;
+      setToken(token);
+      useAuthStore.setState({
+        user: { id: userId, email, firstName, lastName }
+      });
+      toast.success('Registration successful! Welcome aboard 🎉');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
