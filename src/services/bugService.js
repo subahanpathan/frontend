@@ -24,6 +24,10 @@ export const bugService = {
     return api.put(`/bugs/${id}`, bugData);
   },
 
+  updateTicket: (id, ticketData) => {
+    return api.put(`/bugs/${id}`, ticketData);
+  },
+
   deleteBug: (id) => {
     return api.delete(`/bugs/${id}`);
   },
