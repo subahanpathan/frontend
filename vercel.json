@@ -4,5 +4,11 @@
   "outputDirectory": "dist",
   "devCommand": "vite",
   "framework": "vite",
-  "public": true
+  "public": true,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
