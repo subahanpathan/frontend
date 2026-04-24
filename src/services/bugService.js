@@ -75,6 +75,12 @@ export const bugService = {
   deleteAttachment: (id) => {
     return api.delete(`/attachments/${id}`);
   },
+
+  // Helper to get secured stream URL for an attachment
+  getAttachmentStreamUrl: (fileName) => {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    return `${baseURL}/attachments/stream/${fileName}`;
+  },
 };
 
 export default bugService;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/index.js';
 import { authAPI } from '../api/apiClient.js';
 import { FiMail, FiLock, FiUser, FiArrowRight } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 const LoginPage = () => {
   const [email, setEmail] = React.useState('');
@@ -17,8 +18,16 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
 
+    const loginPromise = authAPI.login({ email, password });
+
+    toast.promise(loginPromise, {
+      loading: 'Logging in...',
+      success: 'Login successful! Welcome back.',
+      error: (err) => err.message || 'Login failed',
+    });
+
     try {
-      const response = await authAPI.login({ email, password });
+      const response = await loginPromise;
       setToken(response.data.data.token);
       setUser({
         id: response.data.data.userId,

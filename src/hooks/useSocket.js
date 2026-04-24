@@ -14,7 +14,7 @@ export const useSocket = (userId) => {
     // Initialize socket connection
     socketRef.current = io(SOCKET_URL, {
       auth: {
-        token: localStorage.getItem('authToken'),
+        token: localStorage.getItem('token'),
       },
       reconnection: true,
       reconnectionDelay: 1000,

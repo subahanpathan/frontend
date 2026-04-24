@@ -31,7 +31,7 @@ const ActivityFeed = ({ projectId, limit = 30 }) => {
         {
           params: { limit, offset },
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         }
       );

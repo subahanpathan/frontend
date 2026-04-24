@@ -14,7 +14,7 @@ class FilterService {
         config: filterConfig, // { status, priority, assignee, type }
       },
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }
     );
     return response.data;
@@ -23,7 +23,7 @@ class FilterService {
   // Get all saved filters for a project
   async getProjectFilters(projectId) {
     const response = await axios.get(`${API_URL}/projects/${projectId}/filters`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     return response.data;
   }
@@ -31,7 +31,7 @@ class FilterService {
   // Get a specific filter
   async getFilter(filterId) {
     const response = await axios.get(`${API_URL}/filters/${filterId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     return response.data;
   }
@@ -42,7 +42,7 @@ class FilterService {
       `${API_URL}/filters/${filterId}`,
       { config: filterConfig },
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }
     );
     return response.data;
@@ -51,7 +51,7 @@ class FilterService {
   // Delete filter
   async deleteFilter(filterId) {
     await axios.delete(`${API_URL}/filters/${filterId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
   }
 
@@ -61,7 +61,7 @@ class FilterService {
       `${API_URL}/projects/${projectId}/default-filter`,
       { filter_id: filterId },
       {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }
     );
     return response.data;
@@ -73,7 +73,7 @@ class FilterService {
       const response = await axios.get(
         `${API_URL}/projects/${projectId}/default-filter`,
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         }
       );
       return response.data;

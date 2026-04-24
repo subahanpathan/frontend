@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store';
 import authService from '../services/authService';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -30,22 +31,29 @@ function RegisterPage() {
 
     setLoading(true);
 
+    const registrationPromise = authService.register(
+      formData.email,
+      formData.password,
+      formData.firstName,
+      formData.lastName
+    );
+
+    toast.promise(registrationPromise, {
+      loading: 'Creating your account...',
+      success: 'Registration successful! Welcome aboard 🎉',
+      error: (err) => err.response?.data?.message || 'Registration failed. Please try again.',
+    });
+
     try {
-      const response = await authService.register(
-        formData.email,
-        formData.password,
-        formData.firstName,
-        formData.lastName
-      );
+      const response = await registrationPromise;
       const { token, userId, firstName, lastName, email } = response.data.data;
       setToken(token);
       useAuthStore.setState({
         user: { id: userId, email, firstName, lastName }
       });
-      toast.success('Registration successful! Welcome aboard 🎉');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+      // Error handled by toast.promise
     } finally {
       setLoading(false);
     }
@@ -135,9 +143,9 @@ function RegisterPage() {
 
         <p className="text-center text-sm text-gray-600 mt-6">
           Already have an account?{' '}
-          <a href="/login" className="text-blue-600 hover:underline font-medium">
+          <Link to="/login" className="text-blue-600 hover:underline font-medium">
             Login
-          </a>
+          </Link>
         </p>
       </div>
     </div>

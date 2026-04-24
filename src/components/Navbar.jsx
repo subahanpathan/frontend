@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FiMenu, FiX, FiLogOut, FiUser, FiSettings, FiChevronDown } from 'react-icons/fi';
 import { useAuthStore } from '../store/index.js';
+import toast from 'react-hot-toast';
 import NotificationBell from './NotificationBell.jsx';
 import useSocket from '../hooks/useSocket.js';
 
@@ -30,6 +31,7 @@ export const Navbar = ({ sidebarOpen, setSidebarOpen }) => {
   const handleLogout = () => {
     setProfileOpen(false);
     logout();
+    toast.success('Logged out successfully. See you soon!');
     navigate('/login');
   };
 

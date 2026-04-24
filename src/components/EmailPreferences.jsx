@@ -28,7 +28,7 @@ const EmailPreferences = () => {
         `${import.meta.env.VITE_API_URL}/user/email-preferences`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         }
       );
@@ -58,7 +58,7 @@ const EmailPreferences = () => {
         preferences,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         }
       );
